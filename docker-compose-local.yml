@@ -1,0 +1,36 @@
+version: '3'
+services:
+  api:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile-local
+    hostname: api
+    # command: ["npm", "run", "start"]
+    command: ["npm", "run", "dev"]
+    # command: ["npm", "run", "process"]
+    # command: ["npm", "run", "test"]
+    # command: ["npm", "run", "hold"]
+    volumes:
+      - ./:/usr/src/api
+      - /usr/src/api/node_modules
+    ports:
+      - "23089:8081"
+    env_file:
+      - docker/variables-local.env
+    networks:
+      - corpsearch
+  # chrome:
+  #   image: zenika/alpine-chrome:latest
+  #   hostname: chrome
+  #   command: "chromium --headless --no-sandbox --disable-gpu --remote-debugging-port=9222"
+  #   security_opt:
+  #     - seccomp=$(pwd)/chrome.json
+  #   ports:
+  #     - "9222:9222"
+  #   networks:
+  #     - corpsearch
+networks:
+  default:
+    driver: bridge
+  corpsearch:
+    driver: bridge

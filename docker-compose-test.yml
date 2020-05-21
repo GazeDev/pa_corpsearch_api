@@ -1,0 +1,24 @@
+version: '3'
+services:
+  api:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile-test
+    hostname: api
+    command: ["./wait-for-it/wait-for-it.sh", "postgres:5432", "-t", "300", "--", "npm", "run", "test"]
+    volumes:
+      - ./:/usr/src/api
+      - /usr/src/api/node_modules
+    ports:
+      - "23087:8081"
+    env_file:
+      - docker/variables-test.env
+    networks:
+      - geocode
+    depends_on:
+      - postgres
+networks:
+  default:
+    driver: bridge
+  geocode:
+    driver: bridge

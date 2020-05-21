@@ -1,0 +1,28 @@
+image: node:12.16.1
+
+variables:
+  # Configure API
+  NODE_ENV: docker
+  CORS_ORIGIN: localhost
+  SELF_HOST: localhost:23087
+  # HEROKU_API_KEY: [GitLab CI/CD Variable]
+  # HEROKU_REPO: [GitLab CI/CD Variable]
+
+# api test:
+#   stage: test
+#   script:
+#   - npm install
+#   - npm run test
+
+deploy master:
+  stage: deploy
+  script:
+  - git remote add heroku https://heroku:$HEROKU_API_KEY@git.heroku.com/$HEROKU_REPO.git
+  - git checkout master
+  - git push heroku HEAD:master
+  - echo "Deployed to Production Server"
+  environment:
+    name: production
+    url: pgh-geocode-api.herokuapp.com
+  only:
+  - master
