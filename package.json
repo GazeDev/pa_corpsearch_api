@@ -10,7 +10,7 @@
   "scripts": {
     "start": "node index.js",
     "process": "node ./assessments/process.js",
-    "dev": "chromium --headless --no-sandbox --disable-gpu --remote-debugging-port=9222 & nodemon index.js",
+    "dev": "nodemon index.js",
     "test": "gulp test",
     "hold": "tail -f /dev/null"
   },
