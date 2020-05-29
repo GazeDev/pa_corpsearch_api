@@ -1,7 +1,5 @@
 FROM node:12.16.1
 
-RUN apt-get update && apt-get install chromium -y && rm -rf /var/lib/apt/lists/*
-
 WORKDIR /usr/src/api
 
 # For npm@5 or later, copy package-lock.json as well

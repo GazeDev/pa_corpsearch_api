@@ -134,20 +134,23 @@ module.exports = (async() => {
       version: "1.0",
     },
     grouping: 'tags',
-    // securityDefinitions: {
-    //   'Bearer': {
-    //     'type': 'apiKey',
-    //     'name': 'Authorization',
-    //     'in': 'header'
-    //   },
-    //   // 'gaze_auth': {
-    //   //   'type':	'oauth2',
-    //   //   'authorizationUrl':	`${process.env.JWT_ISSUER}/protocol/openid-connect/auth`,
-    //   //   'tokenUrl': `${process.env.JWT_ISSUER}/protocol/openid-connect/token`,
-    //   //   'flow':	'accessCode'
-    //   // },
-    // },
-    // security: [{ 'Bearer': []}],
+    securityDefinitions: {
+      'Bearer': {
+        'type': 'apiKey',
+        'name': 'Authorization',
+        'in': 'header'
+      },
+      // NOTE: type: openIdConnect is not yet supported in the ui: https://github.com/swagger-api/swagger-ui/issues/3517
+      //   Furthermore, at last check (2020-05-25) hapi-swagger-ui is using swagger ui v2, not v3
+      // 'gaze_auth': {
+      //   'type': 'openIdConnect',
+      //   'openIdConnectUrl': `${process.env.JWT_ISSUER}/.well-known/openid-configuration`,
+      // },
+    },
+    security: [{
+      'Bearer': [],
+      // 'gaze_auth': [],
+    }],
     // jsonEditor: true,
   };
 
