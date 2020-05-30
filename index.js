@@ -8,6 +8,7 @@ const HapiSwagger = require('hapi-swagger');
 const jwt = require('hapi-auth-jwt2');
 const jwksRsa = require('jwks-rsa');
 const Boom = require('@hapi/boom');
+const {Sequelize, DataTypes} = require('sequelize');
 
 module.exports = (async() => {
 
@@ -19,6 +20,7 @@ module.exports = (async() => {
     'JWT_NETWORK_URI',
     'JWT_CLIENT',
     'JWT_CLIENT_ROLE',
+    'DATABASE_URL',
   ];
 
   for (let envVar of envVars) {
@@ -36,10 +38,60 @@ module.exports = (async() => {
     }}
   });
 
+  let sequelize;
+  try {
+    sequelize = new Sequelize(process.env.DATABASE_URL, {
+      pool: {
+        log: true,
+        max: 5,
+        min: 0,
+        acquire: 30000,
+        idle: 10000
+      },
+      logging: false,
+    });
+  } catch (err) {
+    console.log('Sequelize init error:');
+    console.log(err);
+  }
+
   const modules = require('./lib/modules');
+
+  const models = {};
 
   const routes = [];
 
+  // define the models of all of our modules
+  for (let mod of modules) {
+    let modelsFile;
+    try {
+      modelsFile = require(`./lib/${mod}/${mod}.models.js`);
+      if (modelsFile.db) {
+        let model = modelsFile.db(sequelize, DataTypes);
+        models[model.name] = model;
+      }
+    } catch(err) {
+      console.log(err);
+      console.log(`module ${mod} did not have a models file`);
+    }
+  }
+  // now that all the models are loaded, run associations
+  Object.keys(models).forEach(function(modelName) {
+    if (models[modelName].associate) {
+      models[modelName].associate(models);
+    }
+  });
+
+  try {
+    if (process.env['DB_DESTROY_DATABASE_RESTRUCTURE'] === 'DB_DESTROY_DATABASE_RESTRUCTURE') {
+      // NOTE: This will wipe/forcibly restructure a database. ONLY USE FOR DEV.
+      await sequelize.sync({force: true});
+    } else {
+      await sequelize.sync();
+    }
+  } catch (e) {
+    console.log('Error during sync:', e);
+  }
 
   const validateUser = async (decoded, request) => {
     // This is a simple check that the `sub` claim
@@ -110,7 +162,7 @@ module.exports = (async() => {
     try {
       routesFile = require(`./lib/${mod}/${mod}.routes.js`);
       if(routesFile.routes) {
-        await server.route(routesFile.routes());
+        await server.route(routesFile.routes(models));
       }
     } catch(err) {
       console.log(err);
