@@ -1,5 +1,16 @@
 version: '3'
 services:
+  postgres:
+    image: postgres:10
+    restart: always
+    volumes:
+      - ./docker/postgres-data:/var/lib/postgresql/data
+    env_file:
+      - docker/variables.env
+    ports:
+      - "15433:5432"
+    networks:
+      - corpsearch
   api:
     build:
       context: .
@@ -13,6 +24,10 @@ services:
       - "127.0.0.1:8082:8081"
     env_file:
       - docker/variables.env
+    networks:
+      - corpsearch
+    depends_on:
+      - postgres
   chrome:
     image: zenika/alpine-chrome:latest
     command: [chromium-browser, "--headless", "--disable-gpu", "--no-sandbox", "--remote-debugging-address=0.0.0.0", "--remote-debugging-port=9222"]
@@ -22,4 +37,6 @@ services:
       - corpsearch
 networks:
   default:
+    driver: bridge
+  corpsearch:
     driver: bridge
