@@ -3,13 +3,13 @@
 # sudo apt install git
 
 # Clone the repo
-# git clone https://gitlab.com/GazeDev/pgh_geocode_api.git
+# git clone https://gitlab.com/GazeDev/pa_corpsearch_api.git
 
 # digital ocean has a droplet with docker and docker-compose installed
 # if you aren't using that, you will need to install them as well
 # https://www.digitalocean.com/community/tutorials/how-to-install-and-use-docker-on-ubuntu-18-04
 
-# cd pgh_geocode_api
+# cd pa_corpsearch_api
 
 # cp docker/variables.env.example docker/variables.env
 
@@ -36,13 +36,13 @@ sudo ufw allow 'Nginx Full'
 # Modify nginx.conf to listen for the right server_name if you need to
 
 # Copy our config to the nginx sites-available directory, with a more specific name
-sudo cp nginx.conf /etc/nginx/sites-available/pgh_geocode_api
+sudo cp nginx.conf /etc/nginx/sites-available/pa_corpsearch_api
 
-# Symlink pgh_geocode_api nginx config to sites-enabled to enable it
-sudo ln -sf /etc/nginx/sites-available/pgh_geocode_api /etc/nginx/sites-enabled
+# Symlink repo nginx config to sites-enabled to enable it
+sudo ln -sf /etc/nginx/sites-available/pa_corpsearch_api /etc/nginx/sites-enabled
 
 # Remove the default site
-rm /etc/nginx/sites-enabled/default
+sudo rm /etc/nginx/sites-enabled/default
 
 # To check for typos in your file:
 sudo nginx -t
@@ -55,7 +55,7 @@ sudo add-apt-repository ppa:certbot/certbot -y
 sudo apt-get update
 sudo apt install python-certbot-nginx -y
 
-sudo certbot --nginx -d geocode-api.pittsburghhousing.org
+sudo certbot --nginx -d corpsearch-api.pittsburghhousing.org
 # Enter email address...:
 # (A)gree to Terms
 # (N)o sharing of email address
