@@ -9,6 +9,7 @@ const jwt = require('hapi-auth-jwt2');
 const jwksRsa = require('jwks-rsa');
 const Boom = require('@hapi/boom');
 const {Sequelize, DataTypes} = require('sequelize');
+const HAPIWebSocket = require("hapi-plugin-websocket");
 
 module.exports = (async() => {
 
@@ -126,6 +127,8 @@ module.exports = (async() => {
 
   server.auth.strategy('jwt', 'jwt', {
     complete: true,
+    attemptToExtractTokenInPayload: 'true', // attempt to get token from 'token' param in payload. the route's auth.payload must be set to true
+    payloadKey: 'Authorization',
     // verify the access token against the remote JWKS
     key: jwksRsa.hapiJwt2KeyAsync({
       cache: true,
@@ -169,6 +172,8 @@ module.exports = (async() => {
       console.log(`module ${mod} did not have a routes file or hapi failed to register them`);
     }
   }
+
+  await server.register(HAPIWebSocket)
 
   server.route({
     method: 'GET',
