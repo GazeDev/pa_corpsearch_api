@@ -5,7 +5,7 @@ WORKDIR /usr/src/api
 # For npm@5 or later, copy package-lock.json as well
 COPY ./package.json ./package-lock.json ./
 
-RUN npm install
+RUN npm ci --only=production
 
 COPY . .
 
