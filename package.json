@@ -1,5 +1,5 @@
 {
-  "name": "pgh_geocode_api",
+  "name": "pa_corpsearch_api",
   "version": "1.0.0",
   "description": "Address standardization and geocode lookup using Allegheny County open source data sets",
   "repository": "https://gitlab.com/gazedev/pgh_geocode_api",
