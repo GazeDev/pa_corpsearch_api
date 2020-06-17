@@ -82,6 +82,7 @@ module.exports = (async() => {
       models[modelName].associate(models);
     }
   });
+  models.sequelize = sequelize;
 
   try {
     if (process.env['DB_DESTROY_DATABASE_RESTRUCTURE'] === 'DB_DESTROY_DATABASE_RESTRUCTURE') {
