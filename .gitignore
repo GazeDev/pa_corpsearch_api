@@ -1,5 +1,6 @@
 
 node_modules
+.env
 docker/postgres-data
 docker/variables.env
 docker/variables-deploy.env
