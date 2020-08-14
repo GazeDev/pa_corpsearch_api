@@ -9,10 +9,49 @@ const jwt = require('hapi-auth-jwt2');
 const jwksRsa = require('jwks-rsa');
 const Boom = require('@hapi/boom');
 const {Sequelize, DataTypes} = require('sequelize');
-const HAPIWebSocket = require("hapi-plugin-websocket");
 
 module.exports = (async() => {
 
+  await ensureEnvironmentVariables();
+
+  const server = await newHapiServer();
+
+  const sequelize = await newSequelize();
+
+  const modules = require('./lib/modules');
+
+  // sequelize modified by reference, returns models for injecting elsewhere
+  const models = await defineAndAssociateModels(sequelize, modules);
+
+  /*
+    NOTE:
+    If a user has Authorization token, it will be passed and validated. If it is
+    invalid the request will fail. Any handler can check if the user is authenticated
+    by checking `request.auth.isAuthenticated`. Any route can require authentication
+    by setting `config.auth: 'jwt'`, which will require the 'jwt' auth strategy
+    from above. If a user is authenticated then the credentials from the strategy
+    will be available in `request.auth.credentials`.
+   */
+  await serverRegisterAuthStrategy(server);
+
+  // server modified by reference to register routes, nothing returned
+  await registerModulesRoutes(server, models, modules);
+
+  await registerSwaggerDocs(server);
+
+  try {
+    server.start();
+    console.info('server running at ' + process.env.SELF_HOST);
+  } catch(err) {
+    console.error(err);
+  }
+
+  return {
+    server: server,
+  };
+})();
+
+function ensureEnvironmentVariables() {
   const envVars = [
     'CORS_ORIGIN',
     'SELF_HOST',
@@ -29,7 +68,9 @@ module.exports = (async() => {
       console.error(`Error: Make sure you have ${envVar} in your environment variables.`);
     }
   }
+}
 
+function newHapiServer() {
   const server = new Hapi.Server({
     port: process.env.PORT || 8081,
     routes: {cors: {
@@ -38,7 +79,10 @@ module.exports = (async() => {
       origin: [process.env.CORS_ORIGIN],
     }}
   });
+  return server;
+}
 
+function newSequelize() {
   let sequelize;
   try {
     sequelize = new Sequelize(process.env.DATABASE_URL, {
@@ -52,16 +96,14 @@ module.exports = (async() => {
       logging: false,
     });
   } catch (err) {
-    console.log('Sequelize init error:');
-    console.log(err);
+    console.error('Sequelize init error:');
+    console.error(err);
   }
+  return sequelize;
+}
 
-  const modules = require('./lib/modules');
-
-  const models = {};
-
-  const routes = [];
-
+async function defineAndAssociateModels(sequelize, modules) {
+  let models = {}
   // define the models of all of our modules
   for (let mod of modules) {
     let modelsFile;
@@ -95,6 +137,10 @@ module.exports = (async() => {
     console.log('Error during sync:', e);
   }
 
+  return models;
+}
+
+async function serverRegisterAuthStrategy(server) {
   const validateUser = async (decoded, request) => {
     // This is a simple check that the `sub` claim
     // exists in the access token.
@@ -149,17 +195,23 @@ module.exports = (async() => {
     strategy: 'jwt',
     mode: 'optional'
   });
+}
 
-  /*
-    NOTE:
-    If a user has Authorization token, it will be passed and validated. If it is
-    invalid the request will fail. Any handler can check if the user is authenticated
-    by checking `request.auth.isAuthenticated`. Any route can require authentication
-    by setting `config.auth: 'jwt'`, which will require the 'jwt' auth strategy
-    from above. If a user is authenticated then the credentials from the strategy
-    will be available in `request.auth.credentials`.
-   */
+  function validateTokenClientRole(token) {
+    let result = false;
+    if (
+      token.hasOwnProperty('resource_access') &&
+      token.resource_access.hasOwnProperty(process.env.JWT_CLIENT) &&
+      token.resource_access[process.env.JWT_CLIENT].hasOwnProperty('roles') &&
+      Array.isArray(token.resource_access[process.env.JWT_CLIENT].roles) &&
+      token.resource_access[process.env.JWT_CLIENT].roles.includes(process.env.JWT_CLIENT_ROLE)
+    ) {
+      result = true;
+    }
+    return result;
+  }
 
+async function registerModulesRoutes(server, models, modules) {
   // Build the routes of all our modules, injecting the models into each
   for (let mod of modules) {
     let routesFile;
@@ -169,12 +221,10 @@ module.exports = (async() => {
         await server.route(routesFile.routes(models));
       }
     } catch(err) {
-      console.log(err);
-      console.log(`module ${mod} did not have a routes file or hapi failed to register them`);
+      console.error(err);
+      console.error(`module ${mod} did not have a routes file or hapi failed to register them`);
     }
   }
-
-  await server.register(HAPIWebSocket)
 
   server.route({
     method: 'GET',
@@ -184,7 +234,9 @@ module.exports = (async() => {
         .response({status: 'up'});
     }
   });
+}
 
+async function registerSwaggerDocs(server) {
   const swaggerOptions = {
     host: process.env.SELF_HOST,
     info: {
@@ -218,72 +270,6 @@ module.exports = (async() => {
       'options': swaggerOptions
     }]);
   } catch (err) {
-    console.log(err);
+    console.error(err);
   }
-
-
-  try {
-    server.start();
-    console.log('server running at ' + process.env.SELF_HOST);
-  } catch(err) {
-    console.log(err);
-  }
-
-  return {
-    server: server,
-  };
-})();
-
-function getAccessToken(username, password) {
-
-  return new Promise((resolve, reject) => {
-    var qs = require("querystring");
-    var http = require("https");
-
-    const endpoint = new URL(process.env.JWT_NETWORK_URI + '/protocol/openid-connect/token');
-
-    const options = {
-      "method": "POST",
-      "headers": {
-        "Content-Type": "application/x-www-form-urlencoded",
-      }
-    };
-
-    var req = http.request(endpoint, options, function (res) {
-      let chunks = "";
-
-      res.on("data", function (chunk) {
-        chunks += chunk;
-      });
-
-      res.on("end", function () {
-        resolve(JSON.parse(chunks));
-      });
-    });
-
-    req.write(
-      qs.stringify({
-        grant_type: 'password',
-        client_id: process.env.JWT_CLIENT,
-        username: username,
-        password: password,
-      })
-    );
-    req.end();
-
-  });
-}
-
-function validateTokenClientRole(token) {
-  let result = false;
-  if (
-    token.hasOwnProperty('resource_access') &&
-    token.resource_access.hasOwnProperty(process.env.JWT_CLIENT) &&
-    token.resource_access[process.env.JWT_CLIENT].hasOwnProperty('roles') &&
-    Array.isArray(token.resource_access[process.env.JWT_CLIENT].roles) &&
-    token.resource_access[process.env.JWT_CLIENT].roles.includes(process.env.JWT_CLIENT_ROLE)
-  ) {
-    result = true;
-  }
-  return result;
 }
