@@ -9,6 +9,7 @@ const jwt = require('hapi-auth-jwt2');
 const jwksRsa = require('jwks-rsa');
 const Boom = require('@hapi/boom');
 const {Sequelize, DataTypes} = require('sequelize');
+const HAPIWebSocket = require("hapi-plugin-websocket");
 
 module.exports = (async() => {
 
@@ -36,6 +37,9 @@ module.exports = (async() => {
 
   // server modified by reference to register routes, nothing returned
   await registerModulesRoutes(server, models, modules);
+
+  // Register HAPIWebSocket so routes can use wss://
+  await server.register(HAPIWebSocket);
 
   await registerSwaggerDocs(server);
 
