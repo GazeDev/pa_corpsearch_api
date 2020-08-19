@@ -57,6 +57,9 @@ module.exports = (async() => {
 
 function ensureEnvironmentVariables() {
   const envVars = [
+    // require SUPER_ADMIN to be set, otherwise it's possible a request without auth could pass SUPER_ADMIN status
+    // (subjectId on auth credentials would match SUPER_ADMIN: undefined)
+    'SUPER_ADMIN',
     'CORS_ORIGIN',
     'SELF_HOST',
     'JWT_AUDIENCE',
@@ -178,7 +181,31 @@ async function serverRegisterAuthStrategy(server) {
 
   server.auth.strategy('jwt', 'jwt', {
     complete: true,
-    attemptToExtractTokenInPayload: 'true', // attempt to get token from 'token' param in payload. the route's auth.payload must be set to true
+    // verify the access token against the remote JWKS
+    key: jwksRsa.hapiJwt2KeyAsync({
+      cache: true,
+      rateLimit: true,
+      jwksRequestsPerMinute: 60,
+      jwksUri: `${process.env.JWT_NETWORK_URI}/protocol/openid-connect/certs`,
+    }),
+    verifyOptions: {
+      audience: process.env.JWT_AUDIENCE,
+      issuer: process.env.JWT_ISSUER,
+      algorithms: ['RS256']
+    },
+    validate: validateUser
+  });
+
+  server.auth.strategy('wsjwt', 'jwt', {
+    complete: true,
+    // we only want to extract token from payload for websocket requests. Using
+    // attemptToExtractTokenInPayload on POST requests without a body allows the
+    // request to go through as authd when it's not (because it expects a payload
+    // validation that never happens)
+    // attempt to get token from 'token' param in payload.
+    // THE ROUTE'S auth.payload *MUST* BE SET TO true, OTHERWISE THE SECOND PASS
+    // CHECK WON'T BE DONE AND AUTH CAN BE BYPASSED
+    attemptToExtractTokenInPayload: 'true',
     payloadKey: 'Authorization',
     // verify the access token against the remote JWKS
     key: jwksRsa.hapiJwt2KeyAsync({
