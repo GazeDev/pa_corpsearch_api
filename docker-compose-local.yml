@@ -30,8 +30,6 @@ services:
       - postgres
   chrome:
     image: zenika/alpine-chrome:latest
-    env_file:
-      - docker/variables-local.env
     command: [chromium-browser, "--headless", "--disable-gpu", "--no-sandbox", "--remote-debugging-address=0.0.0.0", "--remote-debugging-port=9222", "$CHROME_ARG1", "$CHROME_ARG2"]
     ports:
       - "9222:9222"
