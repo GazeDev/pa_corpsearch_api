@@ -16,7 +16,7 @@ services:
       context: .
       dockerfile: docker/Dockerfile-local
     hostname: api
-    command: bash -c "./wait-for-it/wait-for-it.sh postgres:5432 -t 300 && npm run dev"
+    command: bash -c "./wait-for-it/wait-for-it.sh postgres:5432 -t 300 && npx sequelize db:migrate && npm run dev"
     volumes:
       - ./:/usr/src/api
       - /usr/src/api/node_modules
@@ -30,7 +30,7 @@ services:
       - postgres
   chrome:
     image: zenika/alpine-chrome:latest
-    command: [chromium-browser, "--headless", "--disable-gpu", "--no-sandbox", "--remote-debugging-address=0.0.0.0", "--remote-debugging-port=9222", $CHROME_ARG1, $CHROME_ARG2]
+    command: [chromium-browser, "--headless", "--disable-gpu", "--no-sandbox", "--remote-debugging-address=0.0.0.0", "--remote-debugging-port=9222", "$CHROME_ARG1", "$CHROME_ARG2"]
     ports:
       - "9222:9222"
     networks:
