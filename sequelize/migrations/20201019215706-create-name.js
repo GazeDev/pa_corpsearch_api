@@ -10,7 +10,7 @@ module.exports = {
       },
       CorpId: {
         type: Sequelize.INTEGER,
-        references: { model: 'Corpsearches', key: 'id' }
+        references: { model: 'Corps', key: 'id' }
       },
       source: {
         type: Sequelize.ENUM('nameHistory', 'officers')
